@@ -1,0 +1,208 @@
+package com.yarncraft.shop;
+
+import java.util.*;
+
+
+
+class Product {
+    private String id;
+    private String name;
+    private double price;
+    private List<String> colors;
+    private List<String> sizes;
+
+    public Product(String id, String name, double price, List<String> colors, List<String> sizes) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.colors = colors;
+        this.sizes = sizes;
+    }
+
+    public String getId() { return id; }
+    public double getPrice() { return price; }
+    public String getName() { return name; }
+    public List<String> getColors() { return colors; }
+    public List<String> getSizes() { return sizes; }
+}
+
+class CartItem {
+    private String productId;
+    private int quantity;
+    private String selectedColor;
+    private String selectedSize;
+
+    public CartItem(String productId, int quantity, String selectedColor, String selectedSize) {
+        this.productId = productId;
+        this.quantity = quantity;
+        this.selectedColor = selectedColor;
+        this.selectedSize = selectedSize;
+    }
+
+    public String getProductId() { return productId; }
+    public int getQuantity() { return quantity; }
+    public String getSelectedColor() { return selectedColor; }
+    public String getSelectedSize() { return selectedSize; }
+
+    public void setQuantity(int quantity) { this.quantity = quantity; }
+}
+
+class OrderItem {
+    private String productId;
+    private int quantity;
+    private double price;
+    private String selectedColor;
+    private String selectedSize;
+
+    public OrderItem(String productId, int quantity, double price, String color, String size) {
+        this.productId = productId;
+        this.quantity = quantity;
+        this.price = price;
+        this.selectedColor = color;
+        this.selectedSize = size;
+    }
+}
+
+class Order {
+    private String orderId;
+    private String userId;
+    private List<OrderItem> items;
+    private double totalPrice;
+    private Date date;
+    private String paymentMethod;
+    private String status;
+
+    public Order(String orderId, String userId, List<OrderItem> items, double totalPrice,
+                 String paymentMethod) {
+        this.orderId = orderId;
+        this.userId = userId;
+        this.items = items;
+        this.totalPrice = totalPrice;
+        this.paymentMethod = paymentMethod;
+        this.date = new Date();
+        this.status = "Pending";
+    }
+}
+
+
+
+class ProductService {
+
+    // Fake "Database"
+    private Map<String, Product> products = new HashMap<>();
+
+    public ProductService() {
+        products.put("1", new Product("1", "Black Hoodie", 250,
+                Arrays.asList("Black", "White", "Grey"),
+                Arrays.asList("S", "M", "L", "XL")));
+
+        products.put("2", new Product("2", "T-Shirt", 100,
+                Arrays.asList("Red", "Blue"),
+                Arrays.asList("M", "L")));
+    }
+
+    public Product getProduct(String id) {
+        return products.get(id);
+    }
+}
+
+class CartService {
+
+    private List<CartItem> cart = new ArrayList<>();
+    private ProductService productService = new ProductService();
+
+
+    public String addToCart(String productId, int quantity, String color, String size) {
+
+        Product product = productService.getProduct(productId);
+        if (product == null)
+            return " Product not found";
+
+        if (!product.getColors().contains(color))
+            return " Color not available for this product";
+
+        if (!product.getSizes().contains(size))
+            return " Size not available for this product";
+
+
+        for (CartItem item : cart) {
+            if (item.getProductId().equals(productId) &&
+                item.getSelectedColor().equals(color) &&
+                item.getSelectedSize().equals(size)) {
+
+                item.setQuantity(item.getQuantity() + quantity);
+                return "Updated quantity for existing cart item";
+            }
+        }
+
+        // Add new item
+        cart.add(new CartItem(productId, quantity, color, size));
+        return " Added to cart";
+    }
+
+
+    public String removeItem(String productId, String color, String size) {
+        cart.removeIf(item ->
+                item.getProductId().equals(productId) &&
+                item.getSelectedColor().equals(color) &&
+                item.getSelectedSize().equals(size));
+
+        return " Item removed";
+    }
+
+
+    public String updateQuantity(String productId, String color, String size, int newQty) {
+        for (CartItem item : cart) {
+            if (item.getProductId().equals(productId) &&
+                item.getSelectedColor().equals(color) &&
+                item.getSelectedSize().equals(size)) {
+
+                item.setQuantity(newQty);
+                return " Quantity updated";
+            }
+        }
+        return " Item not found in cart";
+    }
+
+    // ---------------- Get Cart Items ----------------
+    public List<CartItem> getCart() {
+        return cart;
+    }
+
+    // ---------------- Clear Cart ----------------
+    public void clearCart() {
+        cart.clear();
+    }
+}
+
+class OrderService {
+
+    private ProductService productService = new ProductService();
+
+    public Order placeOrder(String userId, List<CartItem> cart, String paymentMethod) {
+
+        if (cart.isEmpty()) {
+            System.out.println(" Cart is empty");
+            return null;
+        }
+
+        List<OrderItem> orderItems = new ArrayList<>();
+        double total = 0;
+
+        for (CartItem item : cart) {
+            Product p = productService.getProduct(item.getProductId());
+            double subtotal = p.getPrice() * item.getQuantity();
+            total += subtotal;
+
+            orderItems.add(new OrderItem(
+                    item.getProductId(),
+                    item.getQuantity(),
+                    p.getPrice(),
+                    item.getSelectedColor(),
+                    item.getSelectedSize()
+            ));
+        }
+
+        return new Order(UUID.randomUUID().toString(), userId, orderItems, total, paymentMethod);
+    }
+}
